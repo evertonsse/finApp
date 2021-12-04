@@ -1,3 +1,4 @@
+const { request } = require('express');
 const express = require('express');
 const app = express();
 const { v4: uuidv4 } = require('uuid')
@@ -5,6 +6,9 @@ app.use(express.json());
 
 const customers = []
 
+
+
+//Middleware de que verifica se conta existe
 function verifyIfExistsAccountCPF(request, response, next) {
     const { cpf } = request.headers;
 
@@ -19,6 +23,22 @@ function verifyIfExistsAccountCPF(request, response, next) {
 
 }
 
+
+//Retorna o saldo da conta, utiliza o reduce para fazer a interação dos calores
+function getBalance(statement) {
+    const balance = statement.reduce((acc, operator) => {
+        if (operator.type === 'credit') {
+            return acc + operator;
+        } else {
+            return acc - operator;
+        }
+    }, 0)
+
+    return balance;
+}
+
+
+// Criação da conta
 app.post('/account', (request, response) => {
     const { cpf, name } = request.body;
 
@@ -39,9 +59,52 @@ app.post('/account', (request, response) => {
     return response.status(201).send();
 });
 
+
+// Retorna saldo
 app.get('/statement', verifyIfExistsAccountCPF, (request, response) => {
     const { customer } = request;
     return response.json(customer.statement);
+});
+
+app.post("/deposit", verifyIfExistsAccountCPF, (request, response) => {
+
+    const { description, amount } = request.body;
+
+    const { customer } = request;
+
+    const statementOperation = {
+        description,
+        amount,
+        createdAt: new Date(),
+        type: "credit"
+    };
+
+    customer.statement.push(statementOperation);
+    return response.status(201).send();
+
+});
+
+
+app.post('/withdraw', verifyIfExistsAccountCPF, (request, response) => {
+    const { amount } = request.body;
+    const { customer } = request;
+
+    const balance = getBalance(customer.statement);
+
+    if (balance < amount) {
+        return response.status(400).json({ error: "Saldo insuficiente" })
+    }
+    const statementOperation = {
+        amount,
+        createdAt: new Date(),
+        type: "debit",
+    }
+
+    customer.statement.push(statementOperation)
+    return response.status(201).send();
+
+
 })
+
 
 app.listen(3333);
