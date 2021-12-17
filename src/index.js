@@ -66,6 +66,8 @@ app.get('/statement', verifyIfExistsAccountCPF, (request, response) => {
     return response.json(customer.statement);
 });
 
+
+//Realiza depositos
 app.post("/deposit", verifyIfExistsAccountCPF, (request, response) => {
 
     const { description, amount } = request.body;
@@ -85,6 +87,7 @@ app.post("/deposit", verifyIfExistsAccountCPF, (request, response) => {
 });
 
 
+//Realiza retiradas
 app.post('/withdraw', verifyIfExistsAccountCPF, (request, response) => {
     const { amount } = request.body;
     const { customer } = request;
@@ -92,7 +95,7 @@ app.post('/withdraw', verifyIfExistsAccountCPF, (request, response) => {
     const balance = getBalance(customer.statement);
 
     if (balance < amount) {
-        return response.status(400).json({ error: "Saldo insuficiente" })
+        return response.status(400).json({ error: "Saldo insuficiente!!" })
     }
     const statementOperation = {
         amount,
@@ -104,7 +107,48 @@ app.post('/withdraw', verifyIfExistsAccountCPF, (request, response) => {
     return response.status(201).send();
 
 
+});
+
+
+//Retorna transferencias de uma data
+app.get('/statement/date', verifyIfExistsAccountCPF, (request, response) => {
+    const { customer } = request;
+    const { date } = request.query;
+
+    const dateFormat = new Date(date + " 00:00");
+
+    const statement = customer.statement.filter(
+        (statement) => statement.createdAt.toDateString() ===
+            new Date(dateFormat).toDateString()
+    );
+
+    return response.json(statement);
+});
+
+app.put("/account", verifyIfExistsAccountCPF, (request, response) => {
+    const { name } = request.body;
+    const { customer } = request;
+
+    customer.name = name;
+
+    return response.status(201).send();
 })
 
+app.get('/account', verifyIfExistsAccountCPF, (request, response) => {
+    const { customer } = request;
+    return response.json(customer)
+})
+
+app.delete('/account', verifyIfExistsAccountCPF, (request, response) => {
+const { customer } = request; 
+
+//splice 
+
+customers.splice(customer, 1); 
+
+return response.status(200).json(customers); 
+
+
+})
 
 app.listen(3333);
